@@ -26,7 +26,6 @@ class InvalidDataError(HospitalSystemError):
 
 class Generate():
     _lst_polis = ['0125', '3223', '7777']
-    _lst_ids = ['M001','T002','T001','X002','K001','S002']
 
     #создание полиса
     @staticmethod
@@ -36,15 +35,6 @@ class Generate():
             if polis not in Generate._lst_polis:
                 Generate._lst_polis.append(polis)
                 return polis
-            
-    #создание id для врача
-    @staticmethod
-    def get_code():
-        while True:
-            code = random.choice(string.ascii_uppercase) + ''.join(random.choices(string.digits, k=4))
-            if code not in Generate._lst_ids:
-                Generate._lst_ids.append(code)
-                return code
 
 #-----------Пациент-----------------
 class Patient:
@@ -72,7 +62,7 @@ class Patient:
             
         if name in data.get("patient_dict", {}):
             print(f"\nПациент '{name}' уже существует")
-            return False
+            return 0
 
         else:
             data["patient_dict"][name] = polis
@@ -97,19 +87,18 @@ class Patient:
                 for name, value in list(data["patient_dict"].items()):  # list() чтобы можно было удалять
                     if value == polis1:
                         del data["patient_dict"][name]
-                        print(f"Пациент с ID {polis1} ({name}) удалён.")
+                        print(f"\n --Пациент с ID {polis1} ({name}) удалён --")
                         patient_found = True
                         
                         # Удаление медкарты "medical_cards"
                         if polis1 in data.get("medical_cards", {}):
                             del data["medical_cards"][polis1]
-                            print(f"Медицинская карта пациента {polis1} удалена.")
+                            print(f"\n - Медицинская карта пациента {polis1} удалена.")
                         
                         # Удаление из списка записей "record_dict"
                         if polis1 in data.get("record_dict", {}):
                             del data["record_dict"][polis1]
-                            print(f"Записи пациента {polis1} удалены.")
-                        
+                            print(f"\n - Записи пациента {polis1} удалены.")
                         break
                 
                 if not patient_found:
@@ -178,8 +167,8 @@ class Hospital:
         for name, number in data["patient_dict"].items():
             print(f"ФИО: {name} — Номер карты: {number}")
 
-        with open("hospital.json","w",encoding="UTF-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        #with open("hospital.json","w",encoding="UTF-8") as f:
+        #    json.dump(data, f, indent=2, ensure_ascii=False)
 
     
     def watch_doctor(self):
@@ -190,135 +179,103 @@ class Hospital:
             print("\nФайл не найден!")
             return
             
-        print("\nСписок врачей:\n" + "-" * 30)
+        print("--------Список врачей:-----------")
         for spec, doctors in data["doctor_dict"].items():
             print(f"\nСпециальность: {spec.capitalize()}")
             for doctor_name, doctor_id in doctors.items():
                 print(f"   • {doctor_name} — ID: {doctor_id}")
+        return
     
     def show_hocpital(self):#выведи инфу про поликлинику
         print(f"\nНазвание: {self.name}\nАдрес: {self.addres}\nГлавный врач: {self.chief_medical}\nПочта: {self.mail}")
         return True
 
-    def Work_patient(self):#Нужно ли вам узнать о врачах
-        print("\n====Выберите что хотите сделать:====\n")
+    def Work_patient(self):
+        print("\n====Выберите что хотите сделать:====")
+        
         while True:
-            if input("Хотите узнать информацию о поликлинике?(да/нет) : ").strip().lower() == 'да':
+            print("\n---Узнать информацию о поликлинике?(да/нет)---")
+            reques = input("Введите да/нет : ").strip().lower()
+            if reques == 'да':
                 self.show_hocpital()
-                if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower()=='да':
-                    continue
-                else:
-                    break 
+                if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower() != 'да':
+                    break
+                continue
+
+            print("\n---Посмотреть список врачей (да/нет)---")
+            reques = input("Введите да/нет : ").strip().lower()
+            if reques == 'да':
+                self.watch_doctor()
+                if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower() != 'да':
+                    break
+                continue
+
+            print("\n---Не нашли нужного пункта?(да/нет)---")
+            reques = input("Введите да/нет : ").strip().lower()
+            if reques == 'да':
+                print("\n---Отправляйтесь к регистратуре---")
+                self.Work_registrashion()
+                break
+
+            print("\n---Выйти?(да/нет)---")
+            reques = input("Введите да/нет : ").strip().lower()
+            if reques == 'да':
+                break
             else:
-                if input("\nПосмотреть список врачей (да/нет): ").strip().lower() == 'да':
-                    self.watch_doctor()
-                    if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower()=='да':
-                        continue
-                    else:
-                        break 
-                else:
-                    if input("\nНе нашли нужного пункта?(да/нет) : ").strip().lower() == 'да':
-                        print("\n---Отправляйтесь к регистратуре---")
-                        self.Work_registrashion()
-                        break
-                    else:
-                        if input("\nВыйти?(да/нет): ").strip().lower()=='да':
-                            break
-                        else:
-                            print("\nВведен неверный запрос! Попробуйте снова.\n")
-                            return self.Work_patient()  
+                print("\nВведен неверный запрос! Попробуйте снова.\n")
                         
     def Work_registrashion(self):
-        code = input("\nВведи код администратора: ")
-        if code=='1111':
-            while True:
-                if input("\nПросмотр существующих пациентов (да/нет): ").strip().lower() == 'да':
-                    self.watch_patient()
-                    if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower()=='да':
-                        continue
-                    else:
-                        break
-                else:
-                    if input("\nДобавить пациента (да/нет): ").strip().lower() == 'да':
-                        polis = Generate.get_polis()
-                        name = input("Введите ФИО: ").strip()
-                        result = Patient.add_patient(name,polis)
-                        if result!=False:
-                            print("Медицинская карта: ")
-                            Medical_card.create_medical_card(result[0],result[1])
-                            print(f"Страничка {result[0]} для записей готова")
-                            Record.add_record(result[0])
-                            if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower()=='да':
-                                continue
-                            else:
-                                break
-                        else:
-                            if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower()=='да':
-                                continue
-                            else:
-                                break
-                    else:
-                        if input("\nУдалить пациента(да/нет): ").strip().lower() == 'да':
-                            self.watch_patient()
-                            polis = input("Введите полис: ").strip()
-                            Patient.remove_patient(polis)
-                            #удаление медкарты "medical_cards"
-                            #удаление из списка записей "record_dict"
-                            if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower()=='да':
-                                continue
-                            else:
-                                break 
-                        else:
-                            if input("\nДобавить врача (да/нет): ").strip().lower()=='да':
-                                self.watch_doctor()
-                                name_dc = input("Введите ИФО: ").strip()
-                                spec_ds = input("Введите специальность: ").strip()
-                                Specialization_and_oficce.add_spec_and_oficce(spec_ds)
-                                ids = Generate.get_code()
-                                obj = Doctor.add_doctor(spec_ds,name_dc,ids)
-                                Free_days.create_free_days(obj)
-                                
-                                # Если врач новый - добавить ключ в "record_dict" для всех пациентов
-                                try:
-                                    with open("hospital.json","r",encoding="UTF-8") as f:
-                                        data=json.load(f)
-                                    
-                                    # Добавляем новую специальность в записи всех пациентов
-                                    for polis in data.get("record_dict", {}):
-                                        if spec_ds not in data["record_dict"][polis]:
-                                            data["record_dict"][polis][spec_ds] = []
-                                    
-                                    with open("hospital.json","w",encoding="UTF-8") as f:
-                                        json.dump(data, f, indent=2, ensure_ascii=False)
-                                    print(f"Специальность '{spec_ds}' добавлена в записи всех пациентов.")
-                                    
-                                except FileNotFoundError:
-                                    print("\nФайл не найден!")
-                                
-                                if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower()=='да':
-                                    continue
-                                else:
-                                    break 
-                            else:
-                                if input("\nИменить график работы врачей?(да/нет): ").strip().lower()=='да':
-                                    self.watch_doctor()
-                                    Free_days().work_free_days()
-                                    if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower()=='да':
-                                        continue
-                                    else:
-                                        break 
-                                else:
-                                    if input("Выйти?(да/нет): ").strip().lower()=='да':
-                                        break
-                                    else:
-                                        print("\nВведен неверный запрос! Попробуйте снова.\n")
-                                        return self.Work_patient()
-        else:
-            if input("\nВведен неверный код!Попробовать заново(да/нет): ").strip().lower()=='да':
+        code = input("\n=Введи код администратора=: ")
+        if code != '1111':
+            if input("\nВведен неверный код! Попробовать заново(да/нет): ").strip().lower() == 'да':
                 self.Work_registrashion()
             else:
                 print('\nОшибка входа')
-                return
+            return
+
+        while True:
+            print("\n==== Меню администратора ====")
+            print("1 - Просмотр существующих пациентов")
+            print("2 - Добавить пациента")
+            print("3 - Удалить пациента")
+            print("4 - Изменить график работы врачей")
+            print("5 - Выйти")
+            
+            choice = input("\nВыберите действие (1-6): ").strip()
+            
+            if choice == '1':
+                #Просмотр существующих пациентов
+                self.watch_patient()
+            elif choice == '2':
+                #Добавить пациента
+                polis = Generate.get_polis()
+                name = input("Введите ФИО: ").strip()
+                result = Patient.add_patient(name, polis)
+                if result == 0:
+                    exit
+                else:
+                    Medical_card.create_medical_card(result[0], result[1])
+                    Record.add_record(result[0])
+            elif choice == '3':
+                #Удалить пациента
+                self.watch_patient()
+                polis = input("\n==Введите полис:== ").strip()
+                Patient.remove_patient(polis)
+                
+            elif choice == '4':
+                #Изменить график работы врачей
+                self.watch_doctor()
+                Free_days().work_free_days()
+            elif choice == '5':
+                #выйти
+                break
+            else:
+                print("\nНеверный выбор! Попробуйте снова.")
+                continue
+            
+            # Спросить, нужно ли сделать еще что-то
+            if input('\nНужно ли сделать еще что-то? (да/нет) : ').strip().lower() != 'да':
+                break
 
     def choose_patient(self):
         try:
@@ -377,7 +334,7 @@ class Medical_card:
         gender = input("Введите пол (женский/мужской): ")
         birthday = input("Введите дату рождения (02.04.2000): ")
         phone = input("Введите номер телефона (+7-777-777-70-70): ")
-
+        print("\n---Медицинская карта---: ")
         # Создаем структуру медицинской карты
         data["medical_cards"][polis] = {
             "ФИО": name,
@@ -390,7 +347,7 @@ class Medical_card:
         with open("hospital.json", "w", encoding="UTF-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
-        print(f"Медицинская карта для {name} (полис {polis}) успешно создана!")
+        print(f"\n=Медицинская карта  (полис {polis})=")
 
     def add_diagnosis(self,diagnos : Diagnosis, patient : Patient ,medical_cards : dict):
         self.all_keys = []
@@ -476,30 +433,6 @@ class Specialization_and_oficce:
         self.spetcial = spetcial
 
     @staticmethod
-    def add_spec_and_oficce(spec :str):
-        try:
-            with open("hospital.json","r",encoding="UTF-8") as f:
-                data=json.load(f)
-        except FileNotFoundError:
-            print("\nФайл не найден!")
-            return
-        all_spec = []
-        all_cabin = []
-        for k,n in data["spetcial_and_office"].items():
-            all_spec.append(k)
-            all_cabin.append(n)
-        if spec in all_spec:
-            print("Врач с такой спечальность сущетсвует ")
-            return True
-        else:
-            print(f"Занятые кабинеты : {all_cabin}")
-            cabin = input("Введите кабинет(015): ")
-            data["spetcial_and_office"][spec] = cabin
-            print("Специальность добавлена")
-            with open("hospital.json","w",encoding="UTF-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-
-    @staticmethod
     def choose_spetcial():
         try:
             with open("hospital.json","r",encoding="UTF-8") as f:
@@ -532,7 +465,7 @@ class Doctor:
         self.spec = specialization.spec
         self.name = name 
         self.doctor_id = doctor_id
-        
+
     @staticmethod
     def add_doctor(spec: str,name: str , ids : str):
         try:
@@ -544,7 +477,7 @@ class Doctor:
             
         if name in data.get("doctor_dict", {}):
             print(f"\nВрач '{name}' уже существует")
-            return
+            return False
         else:
             if spec not in data.get("doctor_dict", {}):
                 data["doctor_dict"][spec]={}
@@ -592,21 +525,7 @@ class Free_days:
         self.data = data
         self.time = time
         self.doctor = doctor
-        self.free_days = free_days or {}
-
-    @staticmethod
-    def create_free_days(ids):
-        try:
-            with open("hospital.json", "r", encoding="UTF-8") as f:
-                data = json.load(f)
-        except FileNotFoundError:
-            print("\nФайл не найден!")
-            return
-        
-        data["free_days"][ids] = {}
-        print("Врач внесён в график.")
-        with open("hospital.json", "w", encoding="UTF-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        self.free_days = free_days
 
     @staticmethod
     def choose_a_day(ids: str):
@@ -714,8 +633,8 @@ class Free_days:
 
         request1 = input("\nВведите день для удаления ('29.01.2025'): ").strip()
         if request1 in all_days:
-            confirm = input(f"Удалить день {request1}? (y/n): ").strip().lower()
-            if confirm == 'y':
+            confirm = input(f"Удалить день {request1}? (да/нет): ").strip().lower()
+            if confirm == 'да':
                 del self.free_days[ids][request1]
                 print(f"День {request1} успешно удалён.")
             else:
@@ -791,7 +710,7 @@ class Record:
                 data = json.load(f)
         except FileNotFoundError:
             print("\nФайл не найден!")
-
+        print(f"Пациент '{polic}' успешно добавлен!")
         data["record_dict"][polic] = {
                     'терапевт': [],
                     'хирург' : [],
