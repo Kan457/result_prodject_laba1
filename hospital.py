@@ -3,6 +3,27 @@ import string
 import json
 from datetime import datetime
 
+# Собственные классы исключений
+class HospitalSystemError(Exception):
+    """Базовое исключение для системы больницы"""
+    pass
+
+class PatientNotFoundError(HospitalSystemError):
+    """Пациент не найден"""
+    pass
+
+class DoctorNotFoundError(HospitalSystemError):
+    """Врач не найден"""
+    pass
+
+class AppointmentExistsError(HospitalSystemError):
+    """Запись уже существует"""
+    pass
+
+class InvalidDataError(HospitalSystemError):
+    """Неверные данные"""
+    pass
+
 class Generate():
     _lst_polis = ['0125', '3223', '7777']
     _lst_ids = ['M001','T002','T001','X002','K001','S002']
@@ -33,10 +54,21 @@ class Patient:
     @staticmethod
     def add_patient(name: str, polis: str):
         try:
+            # Валидация входных данных
+            if not name or not isinstance(name, str) or len(name.strip()) == 0:
+                raise InvalidDataError("Имя пациента не может быть пустым")
+            
+            if not polis or not isinstance(polis, str) or len(polis) != 4 or not polis.isdigit():
+                raise InvalidDataError(f"Неверный формат полиса: {polis}")
+            
             with open("hospital.json","r",encoding="UTF-8") as f:
                 data=json.load(f)
         except FileNotFoundError:
             print("\nФайл не найден!")
+            return False
+        except InvalidDataError as e:
+            print(f"\nОшибка данных: {e}")
+            return False
             
         if name in data.get("patient_dict", {}):
             print(f"\nПациент '{name}' уже существует")
@@ -52,33 +84,48 @@ class Patient:
     @staticmethod
     def remove_patient(polis1 : str):
         try:
+            # Валидация полиса
+            if not polis1 or not isinstance(polis1, str) or len(polis1) != 4 or not polis1.isdigit():
+                raise InvalidDataError(f"Неверный формат полиса: {polis1}")
+            
             with open("hospital.json","r",encoding="UTF-8") as f:
                 data=json.load(f)
+            
+            # Проверяем наличие блока с пациентами
+            if "patient_dict" in data:
+                patient_found = False
+                for name, value in list(data["patient_dict"].items()):  # list() чтобы можно было удалять
+                    if value == polis1:
+                        del data["patient_dict"][name]
+                        print(f"Пациент с ID {polis1} ({name}) удалён.")
+                        patient_found = True
+                        
+                        # Удаление медкарты "medical_cards"
+                        if polis1 in data.get("medical_cards", {}):
+                            del data["medical_cards"][polis1]
+                            print(f"Медицинская карта пациента {polis1} удалена.")
+                        
+                        # Удаление из списка записей "record_dict"
+                        if polis1 in data.get("record_dict", {}):
+                            del data["record_dict"][polis1]
+                            print(f"Записи пациента {polis1} удалены.")
+                        
+                        break
+                
+                if not patient_found:
+                    raise PatientNotFoundError(f"Пациент с полисом {polis1} не найден")
+
+                with open("hospital.json","w",encoding="UTF-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                    
         except FileNotFoundError:
             print("\nФайл не найден!")
             return
-
-        # Проверяем наличие блока с пациентами
-        if "patient_dict" in data:
-            for name, value in list(data["patient_dict"].items()):  # list() чтобы можно было удалять
-                if value == polis1:
-                    del data["patient_dict"][name]
-                    print(f"Пациент с ID {polis1} ({name}) удалён.")
-                    
-                    # Удаление медкарты "medical_cards"
-                    if polis1 in data.get("medical_cards", {}):
-                        del data["medical_cards"][polis1]
-                        print(f"Медицинская карта пациента {polis1} удалена.")
-                    
-                    # Удаление из списка записей "record_dict"
-                    if polis1 in data.get("record_dict", {}):
-                        del data["record_dict"][polis1]
-                        print(f"Записи пациента {polis1} удалены.")
-                    
-                    break
-
-            with open("hospital.json","w",encoding="UTF-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+        except InvalidDataError as e:
+            print(f"\nОшибка данных: {e}")
+            return
+        except PatientNotFoundError as e:
+            print(f"\nОшибка: {e}")
 
     def Work_actions(self,polis):
         while True:
@@ -758,99 +805,122 @@ class Record:
     @staticmethod
     def create_record(polis : str):
         try:
+            # Валидация полиса
+            if not polis or not isinstance(polis, str) or len(polis) != 4 or not polis.isdigit():
+                raise InvalidDataError(f"Неверный формат полиса: {polis}")
+            
             with open("hospital.json","r",encoding="UTF-8") as f:
                 data=json.load(f)
-        except FileNotFoundError:
-            print("\nФайл не найден!")
 
-        all_docotor = []
-        for k in data["record_dict"][polis].keys():
-            all_docotor.append(k)
+            # Проверяем существование пациента
+            if polis not in data.get("record_dict", {}):
+                raise PatientNotFoundError(f"Пациент с полисом {polis} не найден в записях")
 
-        spec_office = Specialization_and_oficce.choose_spetcial()#[spec, office]
-        doctor = Doctor.choose_doctor(spec_office[0])#[name, doctor_id]
-        free_time = Free_days.choose_a_day(doctor[1])#[Data, Time]
+            all_docotor = []
+            for k in data["record_dict"][polis].keys():
+                all_docotor.append(k)
 
-        try:
+            spec_office = Specialization_and_oficce.choose_spetcial()#[spec, office]
+            doctor = Doctor.choose_doctor(spec_office[0])#[name, doctor_id]
+            free_time = Free_days.choose_a_day(doctor[1])#[Data, Time]
+
             with open("hospital.json","r",encoding="UTF-8") as f:
                 data=json.load(f)
+
+            if data["record_dict"][polis][spec_office[0]]==[]:
+                data["record_dict"][polis][spec_office[0]] = [
+                    doctor[0],
+                    free_time[0],
+                    free_time[1],
+                    spec_office[1]
+                ]
+                print(f"Запись к {spec_office[0]} ({doctor[0]}) успешно создана!")
+            else:
+                raise AppointmentExistsError(f"Запись к врачу {spec_office[0]} уже существует")
+
+            with open("hospital.json", "w", encoding="UTF-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+                
         except FileNotFoundError:
             print("\nФайл не найден!")
             return
-
-        if data["record_dict"][polis][spec_office[0]]==[]:
-            data["record_dict"][polis][spec_office[0]] = [
-                doctor[0],
-                free_time[0],
-                free_time[1],
-                spec_office[1]
-            ]
-            print(f"Запись к {spec_office[0]} ({doctor[0]}) успешно создана!")
-        else:
-            print("Запись к этому врачу уже существует! Сначала удалите старую.")
-
-        with open("hospital.json", "w", encoding="UTF-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        except InvalidDataError as e:
+            print(f"\nОшибка данных: {e}")
+            return
+        except PatientNotFoundError as e:
+            print(f"\nОшибка: {e}")
+        except AppointmentExistsError as e:
+            print(f"\nОшибка: {e}")
 
     @staticmethod
     # удалить запись
     def remove_record(polis: str):
         import json
         try:
+            # Валидация полиса
+            if not polis or not isinstance(polis, str) or len(polis) != 4 or not polis.isdigit():
+                raise InvalidDataError(f"Неверный формат полиса: {polis}")
+            
             with open("hospital.json", "r", encoding="UTF-8") as f:
                 data = json.load(f)
+
+            if polis not in data["record_dict"]:
+                raise PatientNotFoundError(f"Пациент с полисом {polis} не найден в записях")
+
+            all_record_polic = []
+            for k, n in data["record_dict"][polis].items():  # (полис - специальность)
+                if n:  # если список не пустой
+                    print(f"{k} - {n}")
+                    all_record_polic.append(k)
+
+            if not all_record_polic:
+                print("Нет активных записей.")
+                return
+
+            print('Выбери специальность: ')
+            print(all_record_polic)
+            times = input("Выбранная специальность: ").strip().lower()
+
+            if times in all_record_polic:
+                result_list = data["record_dict"][polis][times]
+                result_name = result_list[0]
+                result_data = result_list[1]
+                result_time = result_list[2]
+
+                # ищем id врача
+                result_ids = data["doctor_dict"][times].get(result_name)
+                if not result_ids:
+                    raise DoctorNotFoundError(f"ID врача не найден для {result_name} в специальности {times}")
+
+                # добавляем время обратно в график врача
+                if result_ids not in data["free_days"]:
+                    data["free_days"][result_ids] = {}
+                if result_data not in data["free_days"][result_ids]:
+                    data["free_days"][result_ids][result_data] = []
+
+                data["free_days"][result_ids][result_data].append(result_time)
+                print("Время добавлено в график врача")
+
+                # удаляем запись
+                data["record_dict"][polis][times] = []
+                print("Запись удалена")
+
+            else:
+                print("Такой записи нет ")
+
+            with open("hospital.json", "w", encoding="UTF-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+                
         except FileNotFoundError:
             print("\nФайл не найден!")
             return
-
-        if polis not in data["record_dict"]:
-            print("Полис не найден!")
+        except InvalidDataError as e:
+            print(f"\nОшибка данных: {e}")
             return
-
-        all_record_polic = []
-        for k, n in data["record_dict"][polis].items():  # (полис - специальность)
-            if n:  # если список не пустой
-                print(f"{k} - {n}")
-                all_record_polic.append(k)
-
-        if not all_record_polic:
-            print("Нет активных записей.")
-            return
-
-        print('Выбери специальность: ')
-        print(all_record_polic)
-        times = input("Выбранная специальность: ").strip().lower()
-
-        if times in all_record_polic:
-            result_list = data["record_dict"][polis][times]
-            result_name = result_list[0]
-            result_data = result_list[1]
-            result_time = result_list[2]
-
-            # ищем id врача
-            result_ids = data["doctor_dict"][times].get(result_name)
-            if not result_ids:
-                print("ID врача не найден!")
-                return
-
-            # добавляем время обратно в график врача
-            if result_ids not in data["free_days"]:
-                data["free_days"][result_ids] = {}
-            if result_data not in data["free_days"][result_ids]:
-                data["free_days"][result_ids][result_data] = []
-
-            data["free_days"][result_ids][result_data].append(result_time)
-            print("Время добавлено в график врача")
-
-            # удаляем запись
-            data["record_dict"][polis][times] = []
-            print("Запись удалена")
-
-        else:
-            print("Такой записи нет ")
-
-        with open("hospital.json", "w", encoding="UTF-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        except PatientNotFoundError as e:
+            print(f"\nОшибка: {e}")
+        except DoctorNotFoundError as e:
+            print(f"\nОшибка: {e}")
 
 
 
