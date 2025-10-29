@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hospital>
+    <!-- Основная информация о больнице -->
+    <hospital_info>
+        <name>Поликлиника №109</name>
+        <address>ул.Марксиская д.16 ст.1</address>
+        <chief_medical>Куликова М.А</chief_medical>
+        <mail>polilinika109@mail.ru</mail>
+    </hospital_info>
+    
+    <!-- Словарь врачей по специальностям -->
+    <doctor_dict>
+        <specialization name="терапевт">
+            <doctor name="Тимошева Наталья Викторовна" id="M001"/>
+            <doctor name="Сомов Павел Игоревич" id="T002"/>
+        </specialization>
+        <specialization name="хирург">
+            <doctor name="Спасская Анна Валерьевна" id="T001"/>
+            <doctor name="Марков Андрей Ильич" id="X002"/>
+        </specialization>
+        <specialization name="стоматолог">
+            <doctor name="Власов Дмитрий Александрович" id="K001"/>
+            <doctor name="Цыпуля Сергей Васильевич" id="S002"/>
+        </specialization>
+    </doctor_dict>
+    
+    <!-- Словарь пациентов -->
+    <patient_dict>
+        <patient name="Волков Александр Петрович" policy="0125"/>
+        <patient name="Соколова Мария Игоревна" policy="3223"/>
+        <patient name="Хомин Николай Сергеевич" policy="7777"/>
+    </patient_dict>
+    
+</hospital>
