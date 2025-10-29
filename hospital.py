@@ -1,7 +1,6 @@
 import random
 import string
 import json
-from datetime import datetime
 
 # Собственные классы исключений
 class HospitalSystemError(Exception):
